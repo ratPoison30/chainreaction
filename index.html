@@ -930,7 +930,7 @@
 
         // Parse emissions — supports raw number or object { co2_level, value }
         const emissions = typeof data === 'object'
-          ? Number(data.co2_level ?? data.value ?? 0)
+          ? Number(data.emissions ?? data.co2_level ?? data.value ?? 0)
           : Number(data);
 
         if (isNaN(emissions)) return;
