@@ -725,7 +725,10 @@
     //   function reduceCredits() external;
     const CONTRACT_ABI = [
       "function carbonCredits() view returns (uint256)",
-      "function reduceCredits() external"
+      "function getCredits() view returns (uint256)",
+      "function reduceCredits(uint256 penalty) public",
+      "function resetCredits() public",
+      "event CreditsBurned(uint256 penaltyAmount, uint256 remainingCredits)"
     ];
 
     // ================================================================
@@ -879,7 +882,7 @@
     async function fetchCredits() {
       if (!contract) return;
       try {
-        const credits = await contract.carbonCredits();
+        const credits = await contract.getCredits();
         $creditsVal.textContent = credits.toString();
         addCreditLog('Balance fetched: ' + credits.toString() + ' credits', 'val');
       } catch (err) {
@@ -969,7 +972,7 @@
       addCreditLog(`Emissions ${emissions} ppm > threshold — sending reduceCredits()...`, 'warn');
 
       try {
-        const tx = await contract.reduceCredits();
+        const tx = await contract.reduceCredits(emissions);
         addCreditLog('Tx submitted: ' + tx.hash.slice(0, 14) + '...', 'tx');
 
         // Wait for confirmation
