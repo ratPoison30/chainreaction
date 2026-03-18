@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,31 +10,41 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet" />
 
   <style>
     /* ── Reset & Base ──────────────────────────────────────────── */
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg:        #0a0e1a;
-      --surface:   #111827;
-      --card:      rgba(17, 24, 39, 0.65);
-      --border:    rgba(99, 102, 241, 0.12);
-      --text:      #e2e8f0;
-      --text-dim:  #64748b;
-      --primary:   #6366f1;
-      --primary-g: linear-gradient(135deg, #6366f1, #8b5cf6);
-      --accent:    #22d3ee;
-      --success:   #34d399;
-      --warning:   #fbbf24;
-      --danger:    #f87171;
-      --radius:    14px;
-      --font:      'Inter', system-ui, sans-serif;
-      --mono:      'JetBrains Mono', monospace;
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
-    html { scroll-behavior: smooth; }
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --card: rgba(17, 24, 39, 0.65);
+      --border: rgba(99, 102, 241, 0.12);
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+      --primary: #6366f1;
+      --primary-g: linear-gradient(135deg, #6366f1, #8b5cf6);
+      --accent: #22d3ee;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --radius: 14px;
+      --font: 'Inter', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
 
     body {
       font-family: var(--font);
@@ -45,7 +56,8 @@
     }
 
     /* ── Ambient background glow ──────────────────────────────── */
-    body::before, body::after {
+    body::before,
+    body::after {
       content: '';
       position: fixed;
       border-radius: 50%;
@@ -54,19 +66,31 @@
       pointer-events: none;
       z-index: 0;
     }
+
     body::before {
-      width: 600px; height: 600px;
-      top: -180px; left: -120px;
+      width: 600px;
+      height: 600px;
+      top: -180px;
+      left: -120px;
       background: var(--primary);
     }
+
     body::after {
-      width: 500px; height: 500px;
-      bottom: -160px; right: -100px;
+      width: 500px;
+      height: 500px;
+      bottom: -160px;
+      right: -100px;
       background: var(--accent);
     }
 
     /* ── Utility ──────────────────────────────────────────────── */
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
 
     /* ── Header ───────────────────────────────────────────────── */
     header {
@@ -74,47 +98,92 @@
       background: rgba(10, 14, 26, 0.7);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      position: sticky; top: 0; z-index: 50;
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
+
     .header-inner {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding: 18px 0;
     }
-    .logo-group { display: flex; align-items: center; gap: 12px; }
-    .logo-icon {
-      width: 38px; height: 38px; border-radius: 10px;
-      background: var(--primary-g);
-      display: grid; place-items: center;
-      font-size: 18px; color: #fff; font-weight: 700;
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-    .logo-text span { color: var(--accent); }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--primary-g);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
 
     .wallet-badge {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; color: var(--text-dim);
-      background: var(--surface); border: 1px solid var(--border);
-      padding: 8px 14px; border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-dim);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 10px;
       font-family: var(--mono);
     }
+
     .wallet-badge .dot {
-      width: 8px; height: 8px; border-radius: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
       background: var(--danger);
       flex-shrink: 0;
     }
-    .wallet-badge .dot.connected { background: var(--success); animation: pulse-dot 2s infinite; }
+
+    .wallet-badge .dot.connected {
+      background: var(--success);
+      animation: pulse-dot 2s infinite;
+    }
 
     .firebase-status {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 11px; color: var(--text-dim);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-dim);
     }
+
     .firebase-status .fb-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--danger); flex-shrink: 0;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--danger);
+      flex-shrink: 0;
       transition: background 0.3s;
     }
+
     .firebase-status .fb-dot.live {
-      background: var(--success); animation: pulse-dot 2s infinite;
+      background: var(--success);
+      animation: pulse-dot 2s infinite;
     }
 
     /* ── Cards ─────────────────────────────────────────────────── */
@@ -127,190 +196,402 @@
       -webkit-backdrop-filter: blur(12px);
       transition: border-color 0.3s, box-shadow 0.3s;
     }
+
     .card:hover {
       border-color: rgba(99, 102, 241, 0.25);
       box-shadow: 0 0 30px rgba(99, 102, 241, 0.06);
     }
+
     .card-label {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
     }
-    .card-label .icon { font-size: 16px; }
+
+    .card-label .icon {
+      font-size: 16px;
+    }
 
     /* ── Grid ──────────────────────────────────────────────────── */
-    .grid { display: grid; gap: 20px; }
-    .grid-top { grid-template-columns: 1fr; }
-    .grid-bottom { grid-template-columns: 1fr 1fr; }
-    @media (max-width: 700px) { .grid-bottom { grid-template-columns: 1fr; } }
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
 
-    main.container { padding-top: 32px; padding-bottom: 48px; }
+    .grid-top {
+      grid-template-columns: 1fr;
+    }
+
+    .grid-bottom {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 700px) {
+      .grid-bottom {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    main.container {
+      padding-top: 32px;
+      padding-bottom: 48px;
+    }
 
     /* ── Form Elements ────────────────────────────────────────── */
-    .input-group { margin-bottom: 16px; }
-    .input-group label {
-      display: block; font-size: 12px; font-weight: 500;
-      color: var(--text-dim); margin-bottom: 6px;
+    .input-group {
+      margin-bottom: 16px;
     }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
     .input-field {
-      width: 100%; padding: 12px 14px;
+      width: 100%;
+      padding: 12px 14px;
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--border);
-      border-radius: 10px; color: var(--text);
-      font-family: var(--mono); font-size: 13px;
-      outline: none; transition: border-color 0.25s;
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.25s;
     }
-    .input-field::placeholder { color: var(--text-dim); opacity: 0.5; }
-    .input-field:focus { border-color: var(--primary); }
+
+    .input-field::placeholder {
+      color: var(--text-dim);
+      opacity: 0.5;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+    }
 
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 13px 24px; border: none; border-radius: 10px;
-      font-family: var(--font); font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: all 0.25s; width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 24px;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      width: 100%;
     }
+
     .btn-primary {
-      background: var(--primary-g); color: #fff;
+      background: var(--primary-g);
+      color: #fff;
       box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
     }
+
     .btn-primary:hover {
       transform: translateY(-1px);
       box-shadow: 0 6px 28px rgba(99, 102, 241, 0.45);
     }
-    .btn-primary:active { transform: translateY(0); }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
     .btn-primary:disabled {
-      opacity: 0.5; cursor: not-allowed; transform: none;
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
       box-shadow: none;
     }
 
     .btn-secondary {
-      background: var(--surface); color: var(--text);
+      background: var(--surface);
+      color: var(--text);
       border: 1px solid var(--border);
     }
-    .btn-secondary:hover { border-color: var(--primary); }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+    }
 
     /* ── Big Number Displays ──────────────────────────────────── */
     .big-number {
-      font-family: var(--mono); font-size: 64px; font-weight: 800;
-      line-height: 1; letter-spacing: -2px;
+      font-family: var(--mono);
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -2px;
       transition: color 0.4s;
     }
-    .big-number.normal { color: var(--success); }
-    .big-number.high { color: var(--danger); }
+
+    .big-number.normal {
+      color: var(--success);
+    }
+
+    .big-number.high {
+      color: var(--danger);
+    }
+
     .big-number-unit {
-      font-size: 16px; font-weight: 500; color: var(--text-dim);
-      margin-left: 6px; letter-spacing: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-left: 6px;
+      letter-spacing: 0;
     }
 
     .credits-number {
-      font-family: var(--mono); font-size: 72px; font-weight: 800;
-      line-height: 1; letter-spacing: -2px;
+      font-family: var(--mono);
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -2px;
       background: var(--primary-g);
-      -webkit-background-clip: text; background-clip: text;
+      -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .status-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 12px; border-radius: 8px;
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
       letter-spacing: 0.8px;
     }
-    .status-badge.normal { background: rgba(52, 211, 153, 0.12); color: var(--success); }
-    .status-badge.high   { background: rgba(248, 113, 113, 0.12); color: var(--danger); }
+
+    .status-badge.normal {
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--success);
+    }
+
+    .status-badge.high {
+      background: rgba(248, 113, 113, 0.12);
+      color: var(--danger);
+    }
+
     .status-badge .pulse {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: currentColor; animation: pulse-dot 2s infinite;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse-dot 2s infinite;
     }
 
     .meta-line {
-      font-size: 12px; color: var(--text-dim); margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 16px;
       font-family: var(--mono);
     }
+
     .meta-line a {
-      color: var(--accent); text-decoration: none;
+      color: var(--accent);
+      text-decoration: none;
     }
-    .meta-line a:hover { text-decoration: underline; }
+
+    .meta-line a:hover {
+      text-decoration: underline;
+    }
 
     /* ── Tx Pending Spinner ───────────────────────────────────── */
     .tx-pending-bar {
-      display: none; align-items: center; gap: 10px;
-      margin-top: 16px; padding: 10px 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 10px 14px;
       background: rgba(99, 102, 241, 0.08);
       border: 1px solid rgba(99, 102, 241, 0.15);
-      border-radius: 10px; font-size: 13px; color: var(--primary);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--primary);
     }
-    .tx-pending-bar.visible { display: flex; }
+
+    .tx-pending-bar.visible {
+      display: flex;
+    }
+
     .spinner {
-      width: 16px; height: 16px; border: 2px solid var(--primary);
-      border-top-color: transparent; border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--primary);
+      border-top-color: transparent;
+      border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
 
     /* ── Toast ─────────────────────────────────────────────────── */
     .toast-container {
-      position: fixed; top: 20px; right: 20px; z-index: 999;
-      display: flex; flex-direction: column; gap: 8px;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
+
     .toast {
-      padding: 12px 18px; border-radius: 10px;
-      font-size: 13px; font-weight: 500;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
       animation: slide-in 0.35s ease-out;
       max-width: 360px;
     }
-    .toast.info    { background: #1e293b; color: var(--accent); border: 1px solid rgba(34, 211, 238, 0.2); }
-    .toast.success { background: #1e293b; color: var(--success); border: 1px solid rgba(52, 211, 153, 0.2); }
-    .toast.error   { background: #1e293b; color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.2); }
+
+    .toast.info {
+      background: #1e293b;
+      color: var(--accent);
+      border: 1px solid rgba(34, 211, 238, 0.2);
+    }
+
+    .toast.success {
+      background: #1e293b;
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+    }
+
+    .toast.error {
+      background: #1e293b;
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+    }
 
     /* ── Log / History ────────────────────────────────────────── */
     .log-area {
-      margin-top: 20px; max-height: 160px; overflow-y: auto;
-      padding: 12px; border-radius: 10px;
+      margin-top: 20px;
+      max-height: 160px;
+      overflow-y: auto;
+      padding: 12px;
+      border-radius: 10px;
       background: rgba(15, 23, 42, 0.6);
       border: 1px solid var(--border);
     }
+
     .log-entry {
-      font-family: var(--mono); font-size: 11px;
-      color: var(--text-dim); padding: 4px 0;
-      border-bottom: 1px solid rgba(99,102,241,0.06);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(99, 102, 241, 0.06);
     }
-    .log-entry:last-child { border-bottom: none; }
-    .log-entry .timestamp { color: var(--text-dim); opacity: 0.5; margin-right: 8px; }
-    .log-entry .val { color: var(--accent); }
-    .log-entry .warn { color: var(--warning); }
-    .log-entry .tx   { color: var(--primary); }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry .timestamp {
+      color: var(--text-dim);
+      opacity: 0.5;
+      margin-right: 8px;
+    }
+
+    .log-entry .val {
+      color: var(--accent);
+    }
+
+    .log-entry .warn {
+      color: var(--warning);
+    }
+
+    .log-entry .tx {
+      color: var(--primary);
+    }
 
     /* ── Section Heading ──────────────────────────────────────── */
     .section-title {
-      font-size: 13px; font-weight: 600; color: var(--text-dim);
-      text-transform: uppercase; letter-spacing: 1px;
-      margin-bottom: 16px; padding-bottom: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
     }
 
     /* ── Animations ───────────────────────────────────────────── */
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: 0.5; transform: scale(0.85); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.85);
+      }
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     @keyframes slide-in {
-      from { opacity: 0; transform: translateX(40px); }
-      to   { opacity: 1; transform: translateX(0); }
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
+
     @keyframes fade-up {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
     .fade-up {
       animation: fade-up 0.5s ease-out both;
     }
-    .fade-up-d1 { animation-delay: 0.1s; }
-    .fade-up-d2 { animation-delay: 0.2s; }
-    .fade-up-d3 { animation-delay: 0.3s; }
+
+    .fade-up-d1 {
+      animation-delay: 0.1s;
+    }
+
+    .fade-up-d2 {
+      animation-delay: 0.2s;
+    }
+
+    .fade-up-d3 {
+      animation-delay: 0.3s;
+    }
   </style>
 </head>
+
 <body>
 
   <!-- ─── Header ──────────────────────────────────────────────── -->
@@ -349,7 +630,12 @@
         </div>
         <div style="display: flex; gap: 12px; margin-top: 18px;">
           <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><circle cx="18" cy="16" r="1"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
+              <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+              <circle cx="18" cy="16" r="1" />
+            </svg>
             Connect MetaMask
           </button>
           <button class="btn btn-secondary" id="initContractBtn" onclick="initContract()" disabled>
@@ -428,20 +714,11 @@
     // ================================================================
     //  State
     // ================================================================
-    // ================================================================
-    //  Firebase Configuration
-    // ================================================================
-    const firebaseConfig = {
-      databaseURL: "YOUR_FIREBASE_URL_HERE"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-
-    let provider       = null;
-    let signer         = null;
-    let contract       = null;
-    let txPending      = false;
-    let lastEmissions  = null;   // For data throttling
+    let provider = null;
+    let signer = null;
+    let contract = null;
+    let txPending = false;
+    let lastEmissions = null;   // For data throttling
 
     // Placeholder ABI — matches a Solidity contract with:
     //   uint256 public carbonCredits;
@@ -454,22 +731,36 @@
     // ================================================================
     //  DOM References
     // ================================================================
-    const $walletDot      = document.getElementById('walletDot');
-    const $walletAddr     = document.getElementById('walletAddr');
-    const $connectBtn     = document.getElementById('connectBtn');
-    const $initBtn        = document.getElementById('initContractBtn');
-    const $contractAddr   = document.getElementById('contractAddr');
-    const $deviceId       = document.getElementById('deviceId');
-    const $emissionsVal   = document.getElementById('emissionsValue');
-    const $statusBadge    = document.getElementById('statusBadge');
-    const $statusText     = document.getElementById('statusText');
-    const $deviceLabel    = document.getElementById('deviceLabel');
-    const $creditsVal     = document.getElementById('creditsValue');
-    const $txPendingBar   = document.getElementById('txPendingBar');
-    const $lastTxLine     = document.getElementById('lastTxLine');
-    const $lastTxLink     = document.getElementById('lastTxLink');
-    const $logArea        = document.getElementById('logArea');
-    const $creditsLog     = document.getElementById('creditsLog');
+    const $walletDot = document.getElementById('walletDot');
+    const $walletAddr = document.getElementById('walletAddr');
+    const $connectBtn = document.getElementById('connectBtn');
+    const $initBtn = document.getElementById('initContractBtn');
+    const $contractAddr = document.getElementById('contractAddr');
+    const $deviceId = document.getElementById('deviceId');
+    const $emissionsVal = document.getElementById('emissionsValue');
+    const $statusBadge = document.getElementById('statusBadge');
+    const $statusText = document.getElementById('statusText');
+    const $deviceLabel = document.getElementById('deviceLabel');
+    const $creditsVal = document.getElementById('creditsValue');
+    const $txPendingBar = document.getElementById('txPendingBar');
+    const $lastTxLine = document.getElementById('lastTxLine');
+    const $lastTxLink = document.getElementById('lastTxLink');
+    const $logArea = document.getElementById('logArea');
+    const $creditsLog = document.getElementById('creditsLog');
+
+    // ================================================================
+    //  Firebase Configuration
+    // ================================================================
+    const firebaseConfig = {
+      databaseURL: "YOUR_FIREBASE_URL_HERE"
+    };
+    let database = null;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      database = firebase.database();
+    } catch (err) {
+      console.warn('[Firebase] Init failed — replace YOUR_FIREBASE_URL_HERE with your real URL:', err.message);
+    }
 
     // ================================================================
     //  Toast Helper
@@ -531,7 +822,7 @@
 
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         provider = new ethers.BrowserProvider(window.ethereum);
-        signer   = await provider.getSigner();
+        signer = await provider.getSigner();
 
         const addr = accounts[0];
         $walletAddr.textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
@@ -602,8 +893,8 @@
     //  4. Firebase Realtime Listener
     // ================================================================
     const $firebaseStatus = document.getElementById('firebaseStatus');
-    const $fbDot          = document.getElementById('fbDot');
-    const $fbStatusText   = document.getElementById('fbStatusText');
+    const $fbDot = document.getElementById('fbDot');
+    const $fbStatusText = document.getElementById('fbStatusText');
 
     function startFirebaseListener() {
       const deviceName = $deviceId.value.trim();
@@ -654,14 +945,14 @@
 
         if (emissions > 100) {
           $emissionsVal.className = 'big-number high';
-          $statusBadge.className  = 'status-badge high';
+          $statusBadge.className = 'status-badge high';
           $statusText.textContent = 'HIGH';
 
           // Trigger reduceCredits — guarded by txPending flag
           triggerReduceCredits(emissions);
         } else {
           $emissionsVal.className = 'big-number normal';
-          $statusBadge.className  = 'status-badge normal';
+          $statusBadge.className = 'status-badge normal';
           $statusText.textContent = 'Normal';
         }
       });
@@ -713,4 +1004,5 @@
   </script>
 
 </body>
+
 </html>
