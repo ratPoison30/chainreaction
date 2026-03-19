@@ -333,7 +333,7 @@
       font-weight: 800;
       line-height: 1;
       letter-spacing: -2px;
-      transition: color 0.4s;
+      transition: color 0.3s;
     }
 
     .big-number.normal {
@@ -362,6 +362,17 @@
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
+      transition: opacity 0.15s;
+    }
+
+    @keyframes number-flash {
+      0%   { opacity: 0.3; transform: scale(0.95); }
+      60%  { opacity: 1;   transform: scale(1.04); }
+      100% { opacity: 1;   transform: scale(1); }
+    }
+
+    .number-flash {
+      animation: number-flash 0.25s ease-out both;
     }
 
     .status-badge {
@@ -718,11 +729,9 @@
     let signer = null;
     let contract = null;
     let txPending = false;
-    let lastEmissions = null;   // For data throttling
+    let lastEmissions = null;   // Always updated; used by re-trigger logic
+    let lastProcessedEmissions = null; // Tracks the last value that STARTED a tx
 
-    // Placeholder ABI — matches a Solidity contract with:
-    //   uint256 public carbonCredits;
-    //   function reduceCredits() external;
     const CONTRACT_ABI = [
       "function carbonCredits() view returns (uint256)",
       "function getCredits() view returns (uint256)",
@@ -931,32 +940,41 @@
         const data = snapshot.val();
         if (data === null || data === undefined) return;
 
-        // Parse emissions — supports raw number or object { co2_level, value }
+        // Parse emissions — supports raw number or object { emissions, co2_level, value }
         const emissions = typeof data === 'object'
           ? Number(data.emissions ?? data.co2_level ?? data.value ?? 0)
           : Number(data);
 
         if (isNaN(emissions)) return;
 
-        // Data throttling: skip if value hasn't changed
-        if (emissions === lastEmissions) return;
+        // Always track the latest value (used by post-tx re-trigger)
         lastEmissions = emissions;
 
-        // Update display
+        // Flash animation on every update for live feel
+        $emissionsVal.classList.remove('number-flash');
+        void $emissionsVal.offsetWidth; // force reflow
+        $emissionsVal.classList.add('number-flash');
         $emissionsVal.textContent = emissions;
         addEmissionLog(emissions);
 
         if (emissions > 100) {
-          $emissionsVal.className = 'big-number high';
+          $emissionsVal.className = 'big-number high number-flash';
           $statusBadge.className = 'status-badge high';
-          $statusText.textContent = 'HIGH';
 
-          // Trigger reduceCredits — guarded by txPending flag
-          triggerReduceCredits(emissions);
+          if (txPending) {
+            // Already a tx in flight — update status to reflect current reading
+            $statusText.textContent = 'HIGH · Tx pending...';
+          } else {
+            $statusText.textContent = 'HIGH';
+            // Only trigger if this is a NEW reading, not the exact same one already submitted
+            if (emissions !== lastProcessedEmissions) {
+              triggerReduceCredits(emissions);
+            }
+          }
         } else {
-          $emissionsVal.className = 'big-number normal';
+          $emissionsVal.className = 'big-number normal number-flash';
           $statusBadge.className = 'status-badge normal';
-          $statusText.textContent = 'Normal';
+          $statusText.textContent = txPending ? 'Normal · Tx pending...' : 'Normal';
         }
       });
     }
@@ -967,15 +985,27 @@
     async function triggerReduceCredits(emissions) {
       if (!contract || txPending) return;
 
+      // penalty = excess above the 100 ppm threshold (e.g. 144 → 44 credits)
+      const penalty = Math.max(1, emissions - 100);
+
       txPending = true;
+      lastProcessedEmissions = emissions; // mark this reading as submitted
       $txPendingBar.classList.add('visible');
-      addCreditLog(`Emissions ${emissions} ppm > threshold — sending reduceCredits()...`, 'warn');
+      addCreditLog(`Emissions ${emissions} ppm → penalty = ${emissions} − 100 = ${penalty} credits`, 'warn');
+
+      // ── Optimistic UI update (instant feedback, no waiting for chain) ──
+      const currentCredits = parseInt($creditsVal.textContent.replace(/,/g, '')) || 0;
+      const optimistic = Math.max(0, currentCredits - penalty);
+      $creditsVal.classList.remove('number-flash');
+      void $creditsVal.offsetWidth;
+      $creditsVal.classList.add('number-flash');
+      $creditsVal.textContent = optimistic;
 
       try {
-        const tx = await contract.reduceCredits(emissions);
+        const tx = await contract.reduceCredits(penalty);
         addCreditLog('Tx submitted: ' + tx.hash.slice(0, 14) + '...', 'tx');
 
-        // Wait for confirmation
+        // Wait for on-chain confirmation
         const receipt = await tx.wait();
 
         // Show tx hash with explorer link
@@ -984,15 +1014,18 @@
         $lastTxLink.href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
 
         addCreditLog('✓ Tx confirmed in block ' + receipt.blockNumber, 'val');
-        showToast('Transaction confirmed!', 'success');
+        showToast('Transaction confirmed! −' + penalty + ' credits', 'success');
 
-        // Refresh credits balance
+        // Sync true on-chain balance (replaces optimistic value)
         await fetchCredits();
 
       } catch (err) {
         console.error('reduceCredits error:', err);
         const reason = err.reason || err.message || 'Unknown error';
-        addCreditLog('✗ Tx failed: ' + reason, 'warn');
+        addCreditLog('✗ Tx failed: ' + reason + ' — reverting optimistic update', 'warn');
+
+        // Revert optimistic update on failure
+        await fetchCredits();
 
         if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
           showToast('Transaction rejected by user.', 'error');
@@ -1002,6 +1035,13 @@
       } finally {
         txPending = false;
         $txPendingBar.classList.remove('visible');
+
+        // ── Race condition fix: re-trigger if emissions are STILL high ──
+        // After the tx settles, if the sensor is still above threshold,
+        // fire another penalty for the continued violation.
+        if (lastEmissions !== null && lastEmissions > 100 && lastEmissions !== lastProcessedEmissions) {
+          setTimeout(() => triggerReduceCredits(lastEmissions), 300);
+        }
       }
     }
   </script>

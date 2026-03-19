@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String       @id @default(uuid())
+  companyName     String       @unique
+  password        String
+  contractAddress String?
+  sensorData      SensorData[]
+}
+
+model SensorData {
+  id        Int      @id @default(autoincrement())
+  co2Level  Int
+  timestamp DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
