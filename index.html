@@ -628,15 +628,18 @@
     <!-- ─── Setup Section ───────────────────────────────────── -->
     <div class="grid grid-top fade-up" style="margin-bottom: 20px;">
       <div class="card">
-        <div class="card-label"><span class="icon">⚙️</span> Setup</div>
+        <div class="card-label"><span class="icon">⚙️</span> Setup (Step 3 of Workshop)</div>
+        <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">
+          Connect your wallet and paste your deployed Contract Address and your team's Wokwi Device ID below.
+        </p>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="input-group" style="margin-bottom:0;">
-            <label for="contractAddr">Contract Address</label>
+            <label for="contractAddr">CarbonTracker Contract Address (On Sepolia)</label>
             <input type="text" id="contractAddr" class="input-field" placeholder="0x..." />
           </div>
           <div class="input-group" style="margin-bottom:0;">
-            <label for="deviceId">Device ID</label>
-            <input type="text" id="deviceId" class="input-field" placeholder="e.g. WOKWI-001" />
+            <label for="deviceId">Wokwi Device ID (Team Name)</label>
+            <input type="text" id="deviceId" class="input-field" placeholder="e.g. ratpoison" />
           </div>
         </div>
         <div style="display: flex; gap: 12px; margin-top: 18px;">
@@ -650,7 +653,7 @@
             Connect MetaMask
           </button>
           <button class="btn btn-secondary" id="initContractBtn" onclick="initContract()" disabled>
-            📄 Initialize Contract
+            📄 Initialize Dashboard
           </button>
         </div>
       </div>
@@ -844,6 +847,12 @@
 
         showToast(`Wallet connected: ${addr.slice(0, 6)}...${addr.slice(-4)}`, 'success');
 
+        // Check if user is actually on Sepolia testnet
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111n) {
+          showToast('WARNING: Please switch MetaMask to Sepolia Testnet!', 'error');
+        }
+
         // Listen for account/chain changes
         window.ethereum.on('accountsChanged', () => window.location.reload());
         window.ethereum.on('chainChanged', () => window.location.reload());
@@ -875,6 +884,10 @@
       $initBtn.disabled = true;
       $contractAddr.disabled = true;
 
+      // Save inputs to localStorage for convenience
+      localStorage.setItem('cr_contractAddr', addr);
+      localStorage.setItem('cr_deviceId', $deviceId.value.trim());
+
       showToast('Contract initialized at ' + addr.slice(0, 8) + '...', 'success');
       addCreditLog('Contract linked: ' + addr.slice(0, 10) + '...' + addr.slice(-6));
 
@@ -884,6 +897,16 @@
       // Start Firebase listener
       startFirebaseListener();
     }
+
+    // ================================================================
+    //  2.1 Auto-Fill from LocalStorage
+    // ================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedAddr = localStorage.getItem('cr_contractAddr');
+      const savedDevice = localStorage.getItem('cr_deviceId');
+      if (savedAddr) $contractAddr.value = savedAddr;
+      if (savedDevice) $deviceId.value = savedDevice;
+    });
 
     // ================================================================
     //  3. Fetch Carbon Credits from Contract
