@@ -102,5 +102,5 @@ This project is broken down into 4 synchronized layers:
 
 ## 🔒 Safety & Rate Limits built into the code
 - **Firmware Dead-band Filter:** The ESP32 only pushes data to Firebase when the hardware reading changes by more than ±2.
-- **Transaction Throttling:** The dashboard integrates an explicit 5-second automatic denounce lock to prevent MetaMask prompt spam if the hardware sensor stays high indiscriminately.
+- **Transaction Throttling:** The dashboard integrates an explicit 25-second automatic cooldown lock to prevent MetaMask prompt spam if the hardware sensor stays high indiscriminately.
 - **Penalty Caps:** Penalties are logically capped both on the frontend (`max 500`) and the smart contract (`require(penalty <= 500)`) to protect against accidental credit wipes and execution reverts.

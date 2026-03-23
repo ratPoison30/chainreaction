@@ -909,8 +909,14 @@
       emissionsChart.update();
     }
 
-    // Initialize chart on page load
-    window.addEventListener('DOMContentLoaded', () => { initChart(); });
+    // Initialize chart + restore saved inputs on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      const savedAddr = localStorage.getItem('cr_contractAddr');
+      const savedDevice = localStorage.getItem('cr_deviceId');
+      if (savedAddr) $contractAddr.value = savedAddr;
+      if (savedDevice) $deviceId.value = savedDevice;
+    });
 
     // ================================================================
     //  Firebase Configuration
@@ -1083,15 +1089,7 @@
       startFirebaseListener();
     }
 
-    // ================================================================
-    //  2.1 Auto-Fill from LocalStorage
-    // ================================================================
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedAddr = localStorage.getItem('cr_contractAddr');
-      const savedDevice = localStorage.getItem('cr_deviceId');
-      if (savedAddr) $contractAddr.value = savedAddr;
-      if (savedDevice) $deviceId.value = savedDevice;
-    });
+
 
     // ================================================================
     //  3. Fetch Carbon Credits from Contract
@@ -1117,6 +1115,10 @@
     const $fbStatusText = document.getElementById('fbStatusText');
 
     function startFirebaseListener() {
+      if (!database) {
+        showToast('Firebase not initialized. Check your database URL.', 'error');
+        return;
+      }
       const deviceName = $deviceId.value.trim();
       if (!deviceName) {
         showToast('Please enter a Device ID.', 'error');
@@ -1194,6 +1196,13 @@
     async function triggerReduceCredits(emissions) {
       if (!contract || txPending) return;
 
+      // Don't waste gas if credits are already depleted
+      const currentDisplay = parseInt($creditsVal.textContent.replace(/,/g, '')) || 0;
+      if (currentDisplay === 0) {
+        addCreditLog('Credits depleted — skipping transaction', 'warn');
+        return;
+      }
+
       // penalty = excess above the 100 ppm threshold, max 500 per tx
       const penalty = Math.min(500, Math.max(1, emissions - 100));
 
@@ -1244,14 +1253,14 @@
       } finally {
         $txPendingBar.classList.remove('visible');
 
-        // ── Cooldown fix: Prevent infinite transaction spamming ──
-        // If emissions remain high, we wait 5s before allowing next transaction
+        // ── Cooldown: Re-trigger every 5s while emissions stay high ──
+        // Even if the sensor value hasn't changed, keep penalizing
         setTimeout(() => {
           txPending = false;
-          if (lastEmissions !== null && lastEmissions > 100 && lastEmissions !== lastProcessedEmissions) {
+          if (lastEmissions !== null && lastEmissions > 100) {
             triggerReduceCredits(lastEmissions);
           }
-        }, 5000);
+        }, 25000);
       }
     }
   </script>
