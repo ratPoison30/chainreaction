@@ -81,7 +81,6 @@ You can deploy the Vanilla HTML dashboard via **GitHub Pages**:
 2. Go to Repository Settings -> Pages, and select deploy from the `main` branch.
 3. Share the resulting link with students.
 
-*(Alternatively, you can run the provided Next.js application by compiling the `src/` directory with `npm install` and `npm run dev`).*
 
 ---
 
