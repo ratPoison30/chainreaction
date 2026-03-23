@@ -849,8 +849,16 @@
 
         // Check if user is actually on Sepolia testnet
         const network = await provider.getNetwork();
-        if (network.chainId !== 11155111n) {
-          showToast('WARNING: Please switch MetaMask to Sepolia Testnet!', 'error');
+        if (network.chainId.toString() !== '11155111') {
+          showToast('Attempting to switch MetaMask to Sepolia Testnet...', 'info');
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0xaa36a7' }], // 11155111 in hex
+            });
+          } catch (switchError) {
+            showToast('WARNING: Please switch MetaMask to Sepolia Testnet manually!', 'error');
+          }
         }
 
         // Listen for account/chain changes
@@ -868,7 +876,7 @@
     // ================================================================
     //  2. Contract Instantiation
     // ================================================================
-    function initContract() {
+    async function initContract() {
       const addr = $contractAddr.value.trim();
       if (!addr || !ethers.isAddress(addr)) {
         showToast('Please enter a valid contract address.', 'error');
@@ -877,6 +885,23 @@
       if (!signer) {
         showToast('Connect your wallet first.', 'error');
         return;
+      }
+
+      $initBtn.innerHTML = 'Connecting...';
+      $initBtn.disabled = true;
+
+      // WORKSHOP UX FIX: Check if there's actual contract code on Sepolia!
+      try {
+        const code = await provider.getCode(addr);
+        if (code === '0x') {
+          showToast('Error: No contract found! Did you deploy to Remix VM by mistake?', 'error');
+          showToast('Make sure environment is "Injected Provider" in Remix.', 'info');
+          $initBtn.innerHTML = '📄 Initialize Dashboard';
+          $initBtn.disabled = false;
+          return;
+        }
+      } catch (err) {
+        console.error("getCode error:", err);
       }
 
       contract = new ethers.Contract(addr, CONTRACT_ABI, signer);
