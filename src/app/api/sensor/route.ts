@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { ethers } from "ethers";
 
 const CONTRACT_ABI = [
-  "function checkEmissions(uint256 co2_level) external",
+  "function reduceCredits(uint256 penalty) public",
 ];
 
 export async function POST(req: NextRequest) {
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     let txHash: string | null = null;
     if (co2_level > 500 && user.contractAddress) {
       try {
+        const penalty = Math.min(500, Math.max(1, co2_level - 100));
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
         const contract = new ethers.Contract(
@@ -50,12 +51,12 @@ export async function POST(req: NextRequest) {
           wallet
         );
 
-        const tx = await contract.checkEmissions(co2_level);
+        const tx = await contract.reduceCredits(penalty);
         await tx.wait();
         txHash = tx.hash;
 
         console.log(
-          `[Web3] checkEmissions called for ${user.companyName} | CO2: ${co2_level} | TX: ${txHash}`
+          `[Web3] reduceCredits called for ${user.companyName} | CO2: ${co2_level} | Penalty: ${penalty} | TX: ${txHash}`
         );
       } catch (web3Error) {
         console.error("[Web3] Contract call failed:", web3Error);

@@ -366,9 +366,20 @@
     }
 
     @keyframes number-flash {
-      0%   { opacity: 0.3; transform: scale(0.95); }
-      60%  { opacity: 1;   transform: scale(1.04); }
-      100% { opacity: 1;   transform: scale(1); }
+      0% {
+        opacity: 0.3;
+        transform: scale(0.95);
+      }
+
+      60% {
+        opacity: 1;
+        transform: scale(1.04);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     .number-flash {
@@ -628,7 +639,7 @@
     <!-- ─── Setup Section ───────────────────────────────────── -->
     <div class="grid grid-top fade-up" style="margin-bottom: 20px;">
       <div class="card">
-        <div class="card-label"><span class="icon">⚙️</span> Setup (Step 3 of Workshop)</div>
+        <div class="card-label"><span class="icon">⚙️</span> Setup</div>
         <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">
           Connect your wallet and paste your deployed Contract Address and your team's Wokwi Device ID below.
         </p>
@@ -1033,8 +1044,8 @@
     async function triggerReduceCredits(emissions) {
       if (!contract || txPending) return;
 
-      // penalty = excess above the 100 ppm threshold (e.g. 144 → 44 credits)
-      const penalty = Math.max(1, emissions - 100);
+      // penalty = excess above the 100 ppm threshold, max 500 per tx
+      const penalty = Math.min(500, Math.max(1, emissions - 100));
 
       txPending = true;
       lastProcessedEmissions = emissions; // mark this reading as submitted
@@ -1081,15 +1092,16 @@
           showToast('Transaction failed: ' + reason, 'error');
         }
       } finally {
-        txPending = false;
         $txPendingBar.classList.remove('visible');
 
-        // ── Race condition fix: re-trigger if emissions are STILL high ──
-        // After the tx settles, if the sensor is still above threshold,
-        // fire another penalty for the continued violation.
-        if (lastEmissions !== null && lastEmissions > 100 && lastEmissions !== lastProcessedEmissions) {
-          setTimeout(() => triggerReduceCredits(lastEmissions), 300);
-        }
+        // ── Cooldown fix: Prevent infinite transaction spamming ──
+        // If emissions remain high, we wait 5s before allowing next transaction
+        setTimeout(() => {
+          txPending = false;
+          if (lastEmissions !== null && lastEmissions > 100 && lastEmissions !== lastProcessedEmissions) {
+            triggerReduceCredits(lastEmissions);
+          }
+        }, 5000);
       }
     }
   </script>
