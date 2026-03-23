@@ -30,9 +30,10 @@ To deploy a contract and pay for gas fees, you need Testnet ETH.
 8. Once deployed, find your contract under "Deployed Contracts" (bottom left) and **copy the Contract Address**.
 
 ### Step 4: Run the IoT Edge Device
-1. Open the Wokwi Simulator link provided by the workshop organizer.
-2. In the `sketch.ino` file, change `String teamName = "yourteamname";` to a unique team identifier.
-3. Click the Play button ("Start Simulation"). As you slide the potentiometer, you should see emissions data printing to the serial monitor in real-time.
+1. Go to [Wokwi](https://wokwi.com/) and log in or create a free account.
+2. Open the Wokwi Simulator link provided by the workshop organizer and click "Save a copy" to clone the project to your account.
+3. In the `sketch.ino` file, change `String teamName = "yourteamname";` to a unique team identifier.
+4. Click the Play button ("Start Simulation"). As you slide the potentiometer, you should see emissions data printing to the serial monitor in real-time.
 
 ### Step 5: Connect to the Web3 Dashboard
 1. Open the Dashboard link provided by the organizer (or run it locally by opening `index.html`).

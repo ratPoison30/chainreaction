@@ -712,6 +712,11 @@
           <span>Transaction pending — waiting for confirmation...</span>
         </div>
 
+        <!-- Contract Explorer Link -->
+        <div class="meta-line" id="contractLinkLine" style="display:none;">
+          Contract on Etherscan: <a id="contractExplorerLink" href="#" target="_blank" rel="noopener">—</a>
+        </div>
+
         <!-- Last Tx Hash -->
         <div class="meta-line" id="lastTxLine" style="display:none;">
           Last tx: <a id="lastTxLink" href="#" target="_blank" rel="noopener">—</a>
@@ -771,6 +776,8 @@
     const $txPendingBar = document.getElementById('txPendingBar');
     const $lastTxLine = document.getElementById('lastTxLine');
     const $lastTxLink = document.getElementById('lastTxLink');
+    const $contractLinkLine = document.getElementById('contractLinkLine');
+    const $contractExplorerLink = document.getElementById('contractExplorerLink');
     const $logArea = document.getElementById('logArea');
     const $creditsLog = document.getElementById('creditsLog');
 
@@ -919,6 +926,12 @@
       $initBtn.innerHTML = '✓ Contract Ready';
       $initBtn.disabled = true;
       $contractAddr.disabled = true;
+
+      if ($contractLinkLine && $contractExplorerLink) {
+        $contractExplorerLink.href = 'https://sepolia.etherscan.io/address/' + addr;
+        $contractExplorerLink.textContent = addr.slice(0, 10) + '...' + addr.slice(-6);
+        $contractLinkLine.style.display = 'block';
+      }
 
       // Save inputs to localStorage for convenience
       localStorage.setItem('cr_contractAddr', addr);
