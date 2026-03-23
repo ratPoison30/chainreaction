@@ -8,6 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" crossorigin="anonymous"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -611,6 +612,22 @@
     .fade-up-d3 {
       animation-delay: 0.3s;
     }
+
+    .fade-up-d4 {
+      animation-delay: 0.4s;
+    }
+
+    /* ── Chart Card ─────────────────────────────────────────── */
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 220px;
+    }
+
+    .chart-wrap canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
   </style>
 </head>
 
@@ -717,6 +734,11 @@
           Contract on Etherscan: <a id="contractExplorerLink" href="#" target="_blank" rel="noopener">—</a>
         </div>
 
+        <!-- Etherscan Read Credits Link -->
+        <div class="meta-line" id="readCreditsLine" style="display:none;">
+          Read Credits on Etherscan: <a id="readCreditsLink" href="#" target="_blank" rel="noopener">View on Explorer →</a>
+        </div>
+
         <!-- Last Tx Hash -->
         <div class="meta-line" id="lastTxLine" style="display:none;">
           Last tx: <a id="lastTxLink" href="#" target="_blank" rel="noopener">—</a>
@@ -730,8 +752,18 @@
 
     </div>
 
+    <!-- ─── Emissions History Chart ─────────────────────────── -->
+    <div class="grid grid-top fade-up fade-up-d3" style="margin-top: 20px;">
+      <div class="card">
+        <div class="card-label"><span class="icon">📊</span> Emissions History (Live)</div>
+        <div class="chart-wrap">
+          <canvas id="emissionsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── Footer Note ───────────────────────────────────────── -->
-    <div class="fade-up fade-up-d3" style="text-align:center; margin-top: 40px;">
+    <div class="fade-up fade-up-d4" style="text-align:center; margin-top: 40px;">
       <p style="font-size: 12px; color: var(--text-dim); opacity: 0.5;">
         ChainReaction Workshop · IoT × Blockchain · Powered by ethers.js v6
       </p>
@@ -756,7 +788,9 @@
       "function getCredits() view returns (uint256)",
       "function reduceCredits(uint256 penalty) public",
       "function resetCredits() public",
-      "event CreditsBurned(uint256 penaltyAmount, uint256 remainingCredits)"
+      "function owner() view returns (address)",
+      "event CreditsBurned(uint256 penaltyAmount, uint256 remainingCredits)",
+      "event CreditsReset(uint256 newBalance)"
     ];
 
     // ================================================================
@@ -778,8 +812,105 @@
     const $lastTxLink = document.getElementById('lastTxLink');
     const $contractLinkLine = document.getElementById('contractLinkLine');
     const $contractExplorerLink = document.getElementById('contractExplorerLink');
+    const $readCreditsLine = document.getElementById('readCreditsLine');
+    const $readCreditsLink = document.getElementById('readCreditsLink');
     const $logArea = document.getElementById('logArea');
     const $creditsLog = document.getElementById('creditsLog');
+
+    // ================================================================
+    //  Chart.js — Emissions History
+    // ================================================================
+    const CHART_MAX_POINTS = 40;
+    const chartLabels = [];
+    const chartData = [];
+    let emissionsChart = null;
+
+    function initChart() {
+      const ctx = document.getElementById('emissionsChart').getContext('2d');
+
+      // Gradient fill
+      const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+      gradient.addColorStop(0, 'rgba(34, 211, 238, 0.35)');
+      gradient.addColorStop(1, 'rgba(34, 211, 238, 0.0)');
+
+      emissionsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartLabels,
+          datasets: [
+            {
+              label: 'Emissions (ppm)',
+              data: chartData,
+              borderColor: '#22d3ee',
+              backgroundColor: gradient,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHitRadius: 8,
+              fill: true,
+              tension: 0.35,
+            },
+            {
+              label: 'Threshold (100 ppm)',
+              data: [],  // filled dynamically
+              borderColor: 'rgba(248, 113, 113, 0.5)',
+              borderWidth: 1.5,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1e293b',
+              titleColor: '#e2e8f0',
+              bodyColor: '#94a3b8',
+              borderColor: 'rgba(99,102,241,0.2)',
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 8,
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#475569', font: { size: 10, family: 'JetBrains Mono' }, maxRotation: 0 },
+              grid: { color: 'rgba(99,102,241,0.06)' },
+            },
+            y: {
+              min: 0,
+              suggestedMax: 200,
+              ticks: { color: '#475569', font: { size: 10, family: 'JetBrains Mono' } },
+              grid: { color: 'rgba(99,102,241,0.06)' },
+            }
+          },
+          animation: { duration: 300 }
+        }
+      });
+    }
+
+    function pushChartPoint(value) {
+      if (!emissionsChart) return;
+      const t = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      chartLabels.push(t);
+      chartData.push(value);
+      // Keep threshold dataset in sync
+      emissionsChart.data.datasets[1].data.push(100);
+
+      if (chartLabels.length > CHART_MAX_POINTS) {
+        chartLabels.shift();
+        chartData.shift();
+        emissionsChart.data.datasets[1].data.shift();
+      }
+      emissionsChart.update();
+    }
+
+    // Initialize chart on page load
+    window.addEventListener('DOMContentLoaded', () => { initChart(); });
 
     // ================================================================
     //  Firebase Configuration
@@ -933,6 +1064,11 @@
         $contractLinkLine.style.display = 'block';
       }
 
+      if ($readCreditsLine && $readCreditsLink) {
+        $readCreditsLink.href = 'https://sepolia.etherscan.io/address/' + addr + '#readContract';
+        $readCreditsLine.style.display = 'block';
+      }
+
       // Save inputs to localStorage for convenience
       localStorage.setItem('cr_contractAddr', addr);
       localStorage.setItem('cr_deviceId', $deviceId.value.trim());
@@ -1028,6 +1164,7 @@
         $emissionsVal.classList.add('number-flash');
         $emissionsVal.textContent = emissions;
         addEmissionLog(emissions);
+        pushChartPoint(emissions);
 
         if (emissions > 100) {
           $emissionsVal.className = 'big-number high number-flash';

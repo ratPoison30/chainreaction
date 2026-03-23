@@ -29,6 +29,13 @@ To deploy a contract and pay for gas fees, you need Testnet ETH.
 7. Click **Deploy**. MetaMask will ask you to confirm and pay gas fees. Click Confirm.
 8. Once deployed, find your contract under "Deployed Contracts" (bottom left) and **copy the Contract Address**.
 
+### Step 3.5: Verify Your Contract on Etherscan (Optional but Recommended)
+Verifying your contract lets you (and the public!) read your live carbon credits directly on the blockchain explorer.
+1. In Remix, go to the **Plugin Manager** (plug icon at bottom-left) and activate the **"Etherscan - Contract Verification"** plugin.
+2. You will need a free Etherscan API key. Go to [Etherscan](https://etherscan.io/register), create an account, and generate an API key under "API Keys".
+3. Back in Remix, open the Etherscan plugin, paste your API key, select the Sepolia network, and paste your deployed **Contract Address**.
+4. Select the correct compiler version and click **Verify**. Once verified, you can visit `https://sepolia.etherscan.io/address/YOUR_ADDRESS#readContract` to see your live `carbonCredits` balance!
+
 ### Step 4: Run the IoT Edge Device
 1. Go to [Wokwi](https://wokwi.com/) and log in or create a free account.
 2. Open the Wokwi Simulator link provided by the workshop organizer and click "Save a copy" to clone the project to your account.
