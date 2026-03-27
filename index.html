@@ -49,7 +49,7 @@
 
     body {
       font-family: var(--font);
-      background: var(--bg);
+      background: var(--bg) url('background.jpg') center/cover no-repeat fixed;
       color: var(--text);
       min-height: 100vh;
       line-height: 1.6;
@@ -736,7 +736,8 @@
 
         <!-- Etherscan Read Credits Link -->
         <div class="meta-line" id="readCreditsLine" style="display:none;">
-          Read Credits on Etherscan: <a id="readCreditsLink" href="#" target="_blank" rel="noopener">View on Explorer →</a>
+          Read Credits on Etherscan: <a id="readCreditsLink" href="#" target="_blank" rel="noopener">View on Explorer
+            →</a>
         </div>
 
         <!-- Last Tx Hash -->
@@ -765,7 +766,7 @@
     <!-- ─── Footer Note ───────────────────────────────────────── -->
     <div class="fade-up fade-up-d4" style="text-align:center; margin-top: 40px;">
       <p style="font-size: 12px; color: var(--text-dim); opacity: 0.5;">
-        ChainReaction Workshop · IoT × Blockchain · Powered by ethers.js v6
+        ChainReaction: Securing Real-World Data on the Blockchain · Brought to you by BMSCE IEEE Student Branch
       </p>
     </div>
 
@@ -774,61 +775,82 @@
   <!-- ─── JavaScript ──────────────────────────────────────────── -->
   <script>
     // ================================================================
-    //  State
+    //  Global State Variables
     // ================================================================
-    let provider = null;
-    let signer = null;
-    let contract = null;
-    let txPending = false;
-    let lastEmissions = null;   // Always updated; used by re-trigger logic
-    let lastProcessedEmissions = null; // Tracks the last value that STARTED a tx
+    //  These variables persist for the lifetime of the page and are
+    //  shared across all the functions below.
 
+    let provider = null;              // ethers.js wrapper around MetaMask's Ethereum provider
+    let signer   = null;              // Represents the connected wallet — can sign transactions
+    let contract = null;              // ethers.js Contract instance pointing at our deployed CarbonTracker
+    let txPending = false;            // Lock flag — true while a blockchain transaction is in-flight
+    let lastEmissions = null;         // The most recent sensor value received from Firebase
+    let lastProcessedEmissions = null; // The sensor value that most recently triggered a transaction
+
+    // ================================================================
+    //  Contract ABI (Application Binary Interface)
+    // ================================================================
+    //  The ABI tells ethers.js what functions and events exist on the
+    //  smart contract so it can encode/decode calls correctly.
+    //  ethers v6 supports this compact "human-readable" format.
     const CONTRACT_ABI = [
-      "function carbonCredits() view returns (uint256)",
-      "function getCredits() view returns (uint256)",
-      "function reduceCredits(uint256 penalty) public",
-      "function resetCredits() public",
-      "function owner() view returns (address)",
+      "function carbonCredits() view returns (uint256)",   // Public state variable auto-getter
+      "function getCredits() view returns (uint256)",      // Explicit read function
+      "function reduceCredits(uint256 penalty) public",    // Deduct credits (called by dashboard)
+      "function resetCredits() public",                    // Owner-only: reset to 10,000
+      "function owner() view returns (address)",           // Returns the deployer's address
       "event CreditsBurned(uint256 penaltyAmount, uint256 remainingCredits)",
       "event CreditsReset(uint256 newBalance)"
     ];
 
     // ================================================================
-    //  DOM References
+    //  DOM Element References
     // ================================================================
-    const $walletDot = document.getElementById('walletDot');
-    const $walletAddr = document.getElementById('walletAddr');
-    const $connectBtn = document.getElementById('connectBtn');
-    const $initBtn = document.getElementById('initContractBtn');
-    const $contractAddr = document.getElementById('contractAddr');
-    const $deviceId = document.getElementById('deviceId');
-    const $emissionsVal = document.getElementById('emissionsValue');
-    const $statusBadge = document.getElementById('statusBadge');
-    const $statusText = document.getElementById('statusText');
-    const $deviceLabel = document.getElementById('deviceLabel');
-    const $creditsVal = document.getElementById('creditsValue');
-    const $txPendingBar = document.getElementById('txPendingBar');
-    const $lastTxLine = document.getElementById('lastTxLine');
-    const $lastTxLink = document.getElementById('lastTxLink');
-    const $contractLinkLine = document.getElementById('contractLinkLine');
-    const $contractExplorerLink = document.getElementById('contractExplorerLink');
-    const $readCreditsLine = document.getElementById('readCreditsLine');
-    const $readCreditsLink = document.getElementById('readCreditsLink');
-    const $logArea = document.getElementById('logArea');
-    const $creditsLog = document.getElementById('creditsLog');
+    //  We grab all the HTML elements we'll need to update at runtime.
+    //  Prefixing with "$" is a common convention to distinguish DOM
+    //  nodes from regular JavaScript variables.
+
+    const $walletDot          = document.getElementById('walletDot');          // Green/red indicator dot
+    const $walletAddr         = document.getElementById('walletAddr');         // Displays truncated wallet address
+    const $connectBtn         = document.getElementById('connectBtn');         // "Connect MetaMask" button
+    const $initBtn            = document.getElementById('initContractBtn');    // "Initialize Dashboard" button
+    const $contractAddr       = document.getElementById('contractAddr');       // Input: deployed contract address
+    const $deviceId           = document.getElementById('deviceId');           // Input: Wokwi team name / device ID
+    const $emissionsVal       = document.getElementById('emissionsValue');     // Big number: current ppm reading
+    const $statusBadge        = document.getElementById('statusBadge');        // Badge: Normal / HIGH
+    const $statusText         = document.getElementById('statusText');         // Text inside the status badge
+    const $deviceLabel        = document.getElementById('deviceLabel');        // Shows which device is connected
+    const $creditsVal         = document.getElementById('creditsValue');       // Big number: remaining credits
+    const $txPendingBar       = document.getElementById('txPendingBar');       // Spinner bar shown during a pending tx
+    const $lastTxLine         = document.getElementById('lastTxLine');         // Container for the last tx hash link
+    const $lastTxLink         = document.getElementById('lastTxLink');         // Clickable Etherscan link for last tx
+    const $contractLinkLine   = document.getElementById('contractLinkLine');   // Container for contract explorer link
+    const $contractExplorerLink = document.getElementById('contractExplorerLink'); // Etherscan contract link
+    const $readCreditsLine    = document.getElementById('readCreditsLine');    // Container for "Read Credits" link
+    const $readCreditsLink    = document.getElementById('readCreditsLink');    // Etherscan readContract link
+    const $logArea            = document.getElementById('logArea');            // Scrollable emissions log panel
+    const $creditsLog         = document.getElementById('creditsLog');         // Scrollable transaction log panel
 
     // ================================================================
-    //  Chart.js — Emissions History
+    //  Chart.js — Live Emissions History Graph
     // ================================================================
-    const CHART_MAX_POINTS = 40;
-    const chartLabels = [];
-    const chartData = [];
-    let emissionsChart = null;
+    //  We render a real-time line chart showing the last N sensor
+    //  readings with a dashed red threshold line at 100 ppm.
 
+    const CHART_MAX_POINTS = 40;   // Max data points visible on the x-axis
+    const chartLabels = [];        // Array of timestamp strings for the x-axis
+    const chartData   = [];        // Array of emissions values for the y-axis
+    let emissionsChart = null;     // Holds the Chart.js instance once created
+
+    /**
+     * initChart() — Creates the Chart.js line chart on the canvas element.
+     * Called once on DOMContentLoaded.
+     */
     function initChart() {
       const ctx = document.getElementById('emissionsChart').getContext('2d');
 
-      // Gradient fill
+      // Create a vertical gradient fill so the area under the line fades
+      // from semi-transparent cyan at the top to fully transparent at bottom.
       const gradient = ctx.createLinearGradient(0, 0, 0, 220);
       gradient.addColorStop(0, 'rgba(34, 211, 238, 0.35)');
       gradient.addColorStop(1, 'rgba(34, 211, 238, 0.0)');
@@ -893,23 +915,36 @@
       });
     }
 
+    /**
+     * pushChartPoint(value) — Adds a new emissions reading to the chart.
+     * Also pushes a matching "100" to the threshold line so it stays
+     * aligned.  When the chart exceeds CHART_MAX_POINTS, the oldest
+     * data point is removed to keep the view scrolling.
+     */
     function pushChartPoint(value) {
       if (!emissionsChart) return;
+
+      // Generate a human-readable timestamp for the x-axis label
       const t = new Date().toLocaleTimeString('en-GB', { hour12: false });
       chartLabels.push(t);
       chartData.push(value);
-      // Keep threshold dataset in sync
+
+      // The threshold line (dataset index 1) must have the same number
+      // of data points as the emissions line, each set to the constant 100.
       emissionsChart.data.datasets[1].data.push(100);
 
+      // Trim oldest points when the chart is full
       if (chartLabels.length > CHART_MAX_POINTS) {
         chartLabels.shift();
         chartData.shift();
         emissionsChart.data.datasets[1].data.shift();
       }
-      emissionsChart.update();
+
+      emissionsChart.update(); // Re-render the chart with the new data
     }
 
-    // Initialize chart + restore saved inputs on page load
+    // On page load: create the chart and restore any previously saved
+    // contract address / device ID from localStorage for convenience.
     window.addEventListener('DOMContentLoaded', () => {
       initChart();
       const savedAddr = localStorage.getItem('cr_contractAddr');
@@ -919,41 +954,61 @@
     });
 
     // ================================================================
-    //  Firebase Configuration
+    //  Firebase Realtime Database — Initialisation
     // ================================================================
+    //  Firebase acts as a low-latency cloud bridge between the ESP32
+    //  hardware (which writes via REST) and this dashboard (which reads
+    //  via a WebSocket listener).  We only need the database URL — no
+    //  API key is required when the RTDB rules allow public read/write.
+
     const firebaseConfig = {
       databaseURL: "https://chainreaction-iot-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
     let database = null;
     try {
-      firebase.initializeApp(firebaseConfig);
-      database = firebase.database();
+      firebase.initializeApp(firebaseConfig);   // Boot the Firebase SDK
+      database = firebase.database();           // Get a reference to the Realtime DB
     } catch (err) {
-      console.warn('[Firebase] Init failed — replace YOUR_FIREBASE_URL_HERE with your real URL:', err.message);
+      console.warn('[Firebase] Init failed:', err.message);
     }
 
     // ================================================================
-    //  Toast Helper
+    //  Toast Notification Helper
     // ================================================================
+    //  Displays a small pop-up message in the top-right corner for 3.5 s
+    //  then fades out and removes itself from the DOM.  Used throughout
+    //  the app for success messages, warnings, and errors.
+
     function showToast(message, type = 'info') {
       const container = document.getElementById('toastContainer');
       const el = document.createElement('div');
-      el.className = `toast ${type}`;
+      el.className = `toast ${type}`;     // CSS class controls colour (info / success / error)
       el.textContent = message;
       container.appendChild(el);
-      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 3500);
-      setTimeout(() => el.remove(), 3900);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 3500); // Fade
+      setTimeout(() => el.remove(), 3900); // Remove from DOM after fade completes
     }
 
     // ================================================================
     //  Logging Helpers
     // ================================================================
+    //  The dashboard has two scrollable log panels:
+    //    • Emissions log (left card)  — every sensor reading
+    //    • Credits log   (right card) — every blockchain transaction
+    //  These helpers format entries with timestamps and colour coding.
+
+    /** Returns a 24-hour formatted timestamp string (HH:MM:SS). */
     function timestamp() {
       return new Date().toLocaleTimeString('en-GB', { hour12: false });
     }
 
+    /**
+     * addEmissionLog(value) — Appends a new entry to the emissions log.
+     * Entries above 100 ppm are highlighted in amber with a warning icon.
+     * The log is capped at 30 entries to prevent unbounded DOM growth.
+     */
     function addEmissionLog(value) {
-      // Clear placeholder on first real entry
+      // On the very first real entry, clear the placeholder text
       if ($logArea.children.length === 1 && $logArea.children[0].textContent.includes('will appear')) {
         $logArea.innerHTML = '';
       }
@@ -961,11 +1016,16 @@
       const entry = document.createElement('div');
       entry.className = 'log-entry';
       entry.innerHTML = `<span class="timestamp">${timestamp()}</span> Emissions: <span class="${isHigh ? 'warn' : 'val'}">${value} ppm</span>${isHigh ? ' <span class="warn">▲ THRESHOLD</span>' : ''}`;
-      $logArea.prepend(entry);
-      // Keep max 30 entries
+      $logArea.prepend(entry);  // Newest entries go to the top
       while ($logArea.children.length > 30) $logArea.removeChild($logArea.lastChild);
     }
 
+    /**
+     * addCreditLog(message, type) — Appends a new entry to the credits /
+     * transaction log.  `type` maps to a CSS class for colour coding:
+     *   'tx'  = purple (transaction hash), 'val' = green (success),
+     *   'warn' = amber (warning/error).
+     */
     function addCreditLog(message, type = 'tx') {
       if ($creditsLog.children.length === 1 && $creditsLog.children[0].textContent.includes('will appear')) {
         $creditsLog.innerHTML = '';
@@ -978,9 +1038,16 @@
     }
 
     // ================================================================
-    //  1. MetaMask Connection
+    //  Step 1 — Connect MetaMask Wallet
     // ================================================================
+    //  This function is called when the user clicks "Connect MetaMask".
+    //  It requests wallet access via the injected window.ethereum object,
+    //  creates an ethers.js provider and signer, then verifies the user
+    //  is on the Sepolia testnet (auto-switching if possible).
+
     async function connectWallet() {
+      // Guard: MetaMask injects window.ethereum — if it's missing, the
+      // extension isn't installed.
       if (typeof window.ethereum === 'undefined') {
         showToast('MetaMask not detected. Please install the extension.', 'error');
         return;
@@ -990,35 +1057,41 @@
         $connectBtn.disabled = true;
         $connectBtn.textContent = 'Connecting...';
 
+        // Prompt MetaMask to show the "Connect" popup and return accounts
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
 
+        // Wrap MetaMask in ethers.js abstractions for easier blockchain calls
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer   = await provider.getSigner();  // The signer can send transactions
+
+        // Update the header badge with a truncated wallet address
         const addr = accounts[0];
         $walletAddr.textContent = addr.slice(0, 6) + '...' + addr.slice(-4);
         $walletDot.classList.add('connected');
         $connectBtn.innerHTML = '✓ Connected';
-        $initBtn.disabled = false;
+        $initBtn.disabled = false;  // Enable the "Initialize Dashboard" button
 
         showToast(`Wallet connected: ${addr.slice(0, 6)}...${addr.slice(-4)}`, 'success');
 
-        // Check if user is actually on Sepolia testnet
+        // Verify the active network is Sepolia (chain ID 11155111).
+        // If not, automatically request MetaMask to switch.
         const network = await provider.getNetwork();
         if (network.chainId.toString() !== '11155111') {
           showToast('Attempting to switch MetaMask to Sepolia Testnet...', 'info');
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0xaa36a7' }], // 11155111 in hex
+              params: [{ chainId: '0xaa36a7' }], // 11155111 in hexadecimal
             });
           } catch (switchError) {
             showToast('WARNING: Please switch MetaMask to Sepolia Testnet manually!', 'error');
           }
         }
 
-        // Listen for account/chain changes
+        // If the user switches accounts or networks while the page is open,
+        // reload the page to reset all state cleanly.
         window.ethereum.on('accountsChanged', () => window.location.reload());
-        window.ethereum.on('chainChanged', () => window.location.reload());
+        window.ethereum.on('chainChanged',    () => window.location.reload());
 
       } catch (err) {
         console.error('Connection error:', err);
@@ -1029,10 +1102,21 @@
     }
 
     // ================================================================
-    //  2. Contract Instantiation
+    //  Step 2 — Initialize the Smart Contract Connection
     // ================================================================
+    //  Called when the user clicks "Initialize Dashboard".  This:
+    //    a) Validates the contract address format
+    //    b) Verifies actual bytecode exists on-chain (catches Remix VM mistake)
+    //    c) Creates an ethers.js Contract instance for read/write calls
+    //    d) Sets up Etherscan explorer links in the UI
+    //    e) Persists inputs to localStorage so they survive page reloads
+    //    f) Fetches the current on-chain credit balance
+    //    g) Starts the Firebase real-time listener for sensor data
+
     async function initContract() {
       const addr = $contractAddr.value.trim();
+
+      // Basic validation — ethers.isAddress checks checksum and length
       if (!addr || !ethers.isAddress(addr)) {
         showToast('Please enter a valid contract address.', 'error');
         return;
@@ -1045,7 +1129,9 @@
       $initBtn.innerHTML = 'Connecting...';
       $initBtn.disabled = true;
 
-      // WORKSHOP UX FIX: Check if there's actual contract code on Sepolia!
+      // Bytecode check: getCode() returns '0x' if the address has no
+      // deployed contract.  This is the #1 mistake in the workshop —
+      // students deploy to Remix's local VM instead of Injected Provider.
       try {
         const code = await provider.getCode(addr);
         if (code === '0x') {
@@ -1059,11 +1145,14 @@
         console.error("getCode error:", err);
       }
 
+      // Create the ethers.js Contract instance — this object exposes
+      // .getCredits(), .reduceCredits(), etc. as async JS functions.
       contract = new ethers.Contract(addr, CONTRACT_ABI, signer);
       $initBtn.innerHTML = '✓ Contract Ready';
       $initBtn.disabled = true;
       $contractAddr.disabled = true;
 
+      // Populate Etherscan links so students can explore on-chain data
       if ($contractLinkLine && $contractExplorerLink) {
         $contractExplorerLink.href = 'https://sepolia.etherscan.io/address/' + addr;
         $contractExplorerLink.textContent = addr.slice(0, 10) + '...' + addr.slice(-6);
@@ -1075,25 +1164,31 @@
         $readCreditsLine.style.display = 'block';
       }
 
-      // Save inputs to localStorage for convenience
+      // Persist to localStorage so fields auto-fill on next page load
       localStorage.setItem('cr_contractAddr', addr);
       localStorage.setItem('cr_deviceId', $deviceId.value.trim());
 
       showToast('Contract initialized at ' + addr.slice(0, 8) + '...', 'success');
       addCreditLog('Contract linked: ' + addr.slice(0, 10) + '...' + addr.slice(-6));
 
-      // Fetch initial balance
+      // Read the current on-chain credit balance and display it
       fetchCredits();
 
-      // Start Firebase listener
+      // Begin listening to Firebase for real-time sensor data
       startFirebaseListener();
     }
 
 
 
     // ================================================================
-    //  3. Fetch Carbon Credits from Contract
+    //  Step 3 — Read On-Chain Carbon Credits
     // ================================================================
+    //  Calls the contract's getCredits() view function (free, no gas)
+    //  and updates the big credits number in the UI.  This is called:
+    //    • Once immediately after contract initialisation
+    //    • After every confirmed or failed transaction to sync the
+    //      displayed balance with the true on-chain value.
+
     async function fetchCredits() {
       if (!contract) return;
       try {
@@ -1108,11 +1203,17 @@
     }
 
     // ================================================================
-    //  4. Firebase Realtime Listener
+    //  Step 4 — Firebase Realtime Listener (The Heart of the Pipeline)
     // ================================================================
+    //  This is the core data loop.  Once started, it opens a persistent
+    //  WebSocket connection to Firebase and fires a callback every time
+    //  the ESP32 pushes a new emissions reading.  Inside the callback
+    //  we update the UI, the chart, and — if emissions exceed the
+    //  threshold — automatically trigger a blockchain transaction.
+
     const $firebaseStatus = document.getElementById('firebaseStatus');
-    const $fbDot = document.getElementById('fbDot');
-    const $fbStatusText = document.getElementById('fbStatusText');
+    const $fbDot          = document.getElementById('fbDot');
+    const $fbStatusText   = document.getElementById('fbStatusText');
 
     function startFirebaseListener() {
       if (!database) {
@@ -1125,6 +1226,7 @@
         return;
       }
 
+      // Lock the device ID input and show connection status indicator
       $deviceLabel.textContent = '📟 ' + deviceName;
       $deviceId.disabled = true;
       $firebaseStatus.style.display = 'inline-flex';
@@ -1132,9 +1234,12 @@
 
       showToast('Listening to Firebase: emissions/' + deviceName, 'info');
 
+      // Create a reference to the Firebase path the ESP32 writes to
       const ref = database.ref('emissions/' + deviceName);
 
-      // Connection status indicator
+      // ── Connection status indicator ──────────────────────────────
+      // Firebase provides a special ".info/connected" node that is
+      // true when the WebSocket is open and false when disconnected.
       database.ref('.info/connected').on('value', (snap) => {
         if (snap.val() === true) {
           $fbDot.classList.add('live');
@@ -1145,88 +1250,123 @@
         }
       });
 
-      // Listen for emissions data
+      // ── Real-time emissions listener ─────────────────────────────
+      // ref.on('value', ...) fires immediately with the current value
+      // and then again every time the ESP32 updates Firebase.
       ref.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data === null || data === undefined) return;
 
-        // Parse emissions — supports raw number or object { emissions, co2_level, value }
+        // The ESP32 sends { "emissions": 130 } but we also handle
+        // alternative key names and raw numbers for robustness.
         const emissions = typeof data === 'object'
           ? Number(data.emissions ?? data.co2_level ?? data.value ?? 0)
           : Number(data);
 
         if (isNaN(emissions)) return;
 
-        // Always track the latest value (used by post-tx re-trigger)
+        // Always store the latest reading — the cooldown re-trigger
+        // logic (in triggerReduceCredits) uses this.
         lastEmissions = emissions;
 
-        // Flash animation on every update for live feel
+        // Play a quick flash animation on the big number for visual
+        // feedback.  Removing and re-adding the class restarts it;
+        // the void offsetWidth forces a browser reflow in between.
         $emissionsVal.classList.remove('number-flash');
-        void $emissionsVal.offsetWidth; // force reflow
+        void $emissionsVal.offsetWidth;
         $emissionsVal.classList.add('number-flash');
         $emissionsVal.textContent = emissions;
+
+        // Log the reading and push it to the Chart.js graph
         addEmissionLog(emissions);
         pushChartPoint(emissions);
 
+        // ── Threshold check: 100 ppm ─────────────────────────────
         if (emissions > 100) {
+          // Visual: turn the emissions display and status badge red
           $emissionsVal.className = 'big-number high number-flash';
-          $statusBadge.className = 'status-badge high';
+          $statusBadge.className  = 'status-badge high';
 
           if (txPending) {
-            // Already a tx in flight — update status to reflect current reading
+            // A transaction is already in-flight — just update the label
             $statusText.textContent = 'HIGH · Tx pending...';
           } else {
             $statusText.textContent = 'HIGH';
-            // Only trigger if this is a NEW reading, not the exact same one already submitted
+            // Only trigger a NEW transaction if the reading differs from
+            // the one that already started a transaction (avoids dupes).
             if (emissions !== lastProcessedEmissions) {
               triggerReduceCredits(emissions);
             }
           }
         } else {
+          // Below threshold — show green "Normal" status
           $emissionsVal.className = 'big-number normal number-flash';
-          $statusBadge.className = 'status-badge normal';
+          $statusBadge.className  = 'status-badge normal';
           $statusText.textContent = txPending ? 'Normal · Tx pending...' : 'Normal';
         }
       });
     }
 
     // ================================================================
-    //  5. Auto-Trigger reduceCredits()
+    //  Step 5 — Automatically Call reduceCredits() on the Blockchain
     // ================================================================
+    //  This function is the Web3 bridge: it converts a high sensor
+    //  reading into a blockchain transaction.  Key design decisions:
+    //
+    //  • PENALTY MATH:  penalty = emissions − 100, clamped to [1, 500]
+    //    so it never exceeds the contract's require(penalty <= 500).
+    //
+    //  • OPTIMISTIC UI:  Credits are deducted visually BEFORE the chain
+    //    confirms (≈15 s).  If the tx fails, we revert by re-fetching.
+    //
+    //  • COOLDOWN (25 s):  After a tx completes (success or fail), we
+    //    wait 25 seconds before allowing another.  This prevents
+    //    MetaMask popup spam if the sensor stays above 100 ppm.
+    //
+    //  • ZERO-CREDIT GUARD:  If credits are already 0, we skip the tx
+    //    entirely to avoid wasting gas on a no-op.
+
     async function triggerReduceCredits(emissions) {
+      // Bail out if no contract or if another tx is already in-flight
       if (!contract || txPending) return;
 
-      // Don't waste gas if credits are already depleted
+      // Don't send a transaction if credits are already fully depleted
       const currentDisplay = parseInt($creditsVal.textContent.replace(/,/g, '')) || 0;
       if (currentDisplay === 0) {
         addCreditLog('Credits depleted — skipping transaction', 'warn');
         return;
       }
 
-      // penalty = excess above the 100 ppm threshold, max 500 per tx
+      // Calculate the penalty: how many ppm above the 100 threshold,
+      // clamped to a minimum of 1 and a maximum of 500 (matching the
+      // smart contract's require() limits).
       const penalty = Math.min(500, Math.max(1, emissions - 100));
 
+      // Lock the tx gate and record which reading triggered this tx
       txPending = true;
-      lastProcessedEmissions = emissions; // mark this reading as submitted
-      $txPendingBar.classList.add('visible');
+      lastProcessedEmissions = emissions;
+      $txPendingBar.classList.add('visible');  // Show the spinner bar
       addCreditLog(`Emissions ${emissions} ppm → penalty = ${emissions} − 100 = ${penalty} credits`, 'warn');
 
-      // ── Optimistic UI update (instant feedback, no waiting for chain) ──
+      // ── Optimistic UI: deduct credits instantly in the display ────
+      // This gives immediate visual feedback while the blockchain takes
+      // ~15 seconds to confirm.  We'll sync the real balance afterwards.
       const currentCredits = parseInt($creditsVal.textContent.replace(/,/g, '')) || 0;
       const optimistic = Math.max(0, currentCredits - penalty);
       $creditsVal.classList.remove('number-flash');
-      void $creditsVal.offsetWidth;
+      void $creditsVal.offsetWidth;   // Force reflow to restart animation
       $creditsVal.classList.add('number-flash');
       $creditsVal.textContent = optimistic;
 
       try {
+        // Send the transaction — this opens MetaMask for the user to sign
         const tx = await contract.reduceCredits(penalty);
         addCreditLog('Tx submitted: ' + tx.hash.slice(0, 14) + '...', 'tx');
 
-        // Wait for on-chain confirmation
+        // Wait until the transaction is mined and included in a block
         const receipt = await tx.wait();
 
-        // Show tx hash with explorer link
+        // Display a clickable Etherscan link to the confirmed transaction
         $lastTxLine.style.display = 'block';
         $lastTxLink.textContent = tx.hash.slice(0, 10) + '...' + tx.hash.slice(-6);
         $lastTxLink.href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
@@ -1234,7 +1374,7 @@
         addCreditLog('✓ Tx confirmed in block ' + receipt.blockNumber, 'val');
         showToast('Transaction confirmed! −' + penalty + ' credits', 'success');
 
-        // Sync true on-chain balance (replaces optimistic value)
+        // Replace the optimistic value with the true on-chain balance
         await fetchCredits();
 
       } catch (err) {
@@ -1242,19 +1382,23 @@
         const reason = err.reason || err.message || 'Unknown error';
         addCreditLog('✗ Tx failed: ' + reason + ' — reverting optimistic update', 'warn');
 
-        // Revert optimistic update on failure
+        // The tx failed — re-fetch the real balance to undo the optimistic deduction
         await fetchCredits();
 
+        // Provide a user-friendly error message depending on the failure type
         if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
           showToast('Transaction rejected by user.', 'error');
         } else {
           showToast('Transaction failed: ' + reason, 'error');
         }
       } finally {
-        $txPendingBar.classList.remove('visible');
+        $txPendingBar.classList.remove('visible');  // Hide the spinner
 
-        // ── Cooldown: Re-trigger every 5s while emissions stay high ──
-        // Even if the sensor value hasn't changed, keep penalizing
+        // ── 25-second cooldown timer ─────────────────────────────────
+        // After the tx completes (whether success or failure), wait 25 s
+        // before unlocking.  If emissions are STILL above 100 at that
+        // point, automatically fire another transaction.  This keeps
+        // penalties flowing while preventing MetaMask prompt spam.
         setTimeout(() => {
           txPending = false;
           if (lastEmissions !== null && lastEmissions > 100) {
