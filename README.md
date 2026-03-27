@@ -15,14 +15,14 @@ Welcome to the workshop! Follow these step-by-step instructions to get your IoT 
 
 ### Step 2: Get Sepolia Test ETH
 To deploy a contract and pay for gas fees, you need Testnet ETH.
-1. Go to a Sepolia Faucet (e.g., [Alchemy Sepolia Faucet](https://sepoliafaucet.com/) or [Sepolia PoW Faucet](https://sepolia-faucet.pk910.de/)).
+1. Go to the [Google Cloud Web3 Faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia) and sign in with your Google account.
 2. Copy your MetaMask wallet address (starts with `0x...`) and paste it into the faucet to receive test ETH.
 3. Wait a minute or two until you see the ETH arrive in your MetaMask balance.
 
 ### Step 3: Deploy the Smart Contract
 1. Head to [Remix IDE](https://remix.ethereum.org/).
 2. Under the "contracts" folder, create a new file named `CarbonTracker.sol`.
-3. Paste in the provided Solidity code for the workshop (`ChainReaction.sol`).
+3. The resource person will walk you through the Solidity smart contract code and explain each section. Paste the code they provide.
 4. Go to the "Solidity Compiler" tab on the left (the 'S' icon) and click **Compile CarbonTracker.sol**.
 5. Go to the "Deploy & Run Transactions" tab (Ethereum logo with arrow).
 6. Change the Environment dropdown from "Remix VM" to **Injected Provider - MetaMask**. MetaMask will pop up; approve the connection.
@@ -39,7 +39,7 @@ Verifying your contract lets you (and the public!) read your live carbon credits
 ### Step 4: Run the IoT Edge Device
 1. Go to [Wokwi](https://wokwi.com/) and log in or create a free account.
 2. Open the Wokwi Simulator link provided by the workshop organizer and click "Save a copy" to clone the project to your account.
-3. In the `sketch.ino` file, change `String teamName = "yourteamname";` to a unique team identifier.
+3. The resource person will explain the Arduino sketch and the code used. In the sketch, change the team name to your unique team identifier.
 4. Click the Play button ("Start Simulation"). As you slide the potentiometer, you should see emissions data printing to the serial monitor in real-time.
 
 ### Step 5: Connect to the Web3 Dashboard
