@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ChainReaction: Securing Real-World Data on the Blockchain</title>
+  <meta name="description" content="Real-time IoT emissions dashboard with blockchain-based carbon credit tracking on Ethereum Sepolia." />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" crossorigin="anonymous"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -12,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Courier+Prime&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Montserrat:wght@900&family=Share+Tech+Mono&display=swap"
     rel="stylesheet" />
 
   <style>
@@ -49,7 +50,7 @@
 
     body {
       font-family: var(--font);
-      background: var(--bg) url('background.jpg') center/cover no-repeat fixed;
+      background: var(--bg) url('background.png') center/cover no-repeat fixed;
       color: var(--text);
       min-height: 100vh;
       line-height: 1.6;
@@ -63,7 +64,7 @@
       position: fixed;
       border-radius: 50%;
       filter: blur(120px);
-      opacity: 0.15;
+      opacity: 0.10;
       pointer-events: none;
       z-index: 0;
     }
@@ -84,6 +85,20 @@
       background: var(--accent);
     }
 
+    /* ── Poster Banner ────────────────────────────────────────── */
+    .poster-banner {
+      width: 100%;
+      position: relative;
+      z-index: 1;
+      line-height: 0;
+    }
+
+    .poster-banner img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     /* ── Utility ──────────────────────────────────────────────── */
     .container {
       max-width: 1100px;
@@ -91,52 +106,6 @@
       padding: 0 24px;
       position: relative;
       z-index: 1;
-    }
-
-    /* ── Header ───────────────────────────────────────────────── */
-    header {
-      border-bottom: 1px solid var(--border);
-      background: rgba(10, 14, 26, 0.7);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-
-    .header-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 0;
-    }
-
-    .logo-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: var(--primary-g);
-      display: grid;
-      place-items: center;
-      font-size: 18px;
-      color: #fff;
-      font-weight: 700;
-    }
-
-    .logo-text {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-    }
-
-    .logo-text span {
-      color: var(--accent);
     }
 
     .wallet-badge {
@@ -633,19 +602,10 @@
 
 <body>
 
-  <!-- ─── Header ──────────────────────────────────────────────── -->
-  <header>
-    <div class="container header-inner">
-      <div class="logo-group">
-        <div class="logo-icon">⛓</div>
-        <div class="logo-text">ChainReaction: <span>Securing Real-World Data on the Blockchain</span></div>
-      </div>
-      <div class="wallet-badge" id="walletBadge">
-        <div class="dot" id="walletDot"></div>
-        <span id="walletAddr">Not Connected</span>
-      </div>
-    </div>
-  </header>
+  <!-- ─── Poster Banner ──────────────────────────────────────── -->
+  <div class="poster-banner">
+    <img src="poster.png" alt="ChainReaction – Securing Real-World Data on the Blockchain" />
+  </div>
 
   <!-- ─── Toast Container ─────────────────────────────────────── -->
   <div class="toast-container" id="toastContainer"></div>
@@ -670,7 +630,7 @@
             <input type="text" id="deviceId" class="input-field" placeholder="e.g. ratpoison" />
           </div>
         </div>
-        <div style="display: flex; gap: 12px; margin-top: 18px;">
+        <div style="display: flex; gap: 12px; margin-top: 18px; align-items: center; flex-wrap: wrap;">
           <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
@@ -683,6 +643,10 @@
           <button class="btn btn-secondary" id="initContractBtn" onclick="initContract()" disabled>
             📄 Initialize Dashboard
           </button>
+          <div class="wallet-badge" id="walletBadge" style="margin-left: auto;">
+            <div class="dot" id="walletDot"></div>
+            <span id="walletAddr">Not Connected</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1076,7 +1040,7 @@
         // Verify the active network is Sepolia (chain ID 11155111).
         // If not, automatically request MetaMask to switch.
         const network = await provider.getNetwork();
-        if (network.chainId.toString() !== '11155111') {
+        if (network.chainId !== 11155111n) {
           showToast('Attempting to switch MetaMask to Sepolia Testnet...', 'info');
           try {
             await window.ethereum.request({
@@ -1330,8 +1294,15 @@
       // Bail out if no contract or if another tx is already in-flight
       if (!contract || txPending) return;
 
+      // Guard: credits haven't been fetched yet (display shows placeholder or error)
+      const rawCreditsText = $creditsVal.textContent.trim();
+      if (rawCreditsText === '—' || rawCreditsText === 'ERR') {
+        addCreditLog('Credits not loaded yet — skipping transaction', 'warn');
+        return;
+      }
+
       // Don't send a transaction if credits are already fully depleted
-      const currentDisplay = parseInt($creditsVal.textContent.replace(/,/g, '')) || 0;
+      const currentDisplay = parseInt(rawCreditsText.replace(/,/g, '')) || 0;
       if (currentDisplay === 0) {
         addCreditLog('Credits depleted — skipping transaction', 'warn');
         return;
@@ -1401,6 +1372,7 @@
         // penalties flowing while preventing MetaMask prompt spam.
         setTimeout(() => {
           txPending = false;
+          lastProcessedEmissions = null;  // Allow re-trigger even if value unchanged
           if (lastEmissions !== null && lastEmissions > 100) {
             triggerReduceCredits(lastEmissions);
           }
