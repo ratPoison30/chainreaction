@@ -116,11 +116,15 @@ void loop() {
       Serial.println(httpResponseCode);
       lastSentValue = emissionsData;  // Update only on success
 
-      // 5. Quick LED blink (80 ms) to visually confirm syncing
-      digitalWrite(ledPin, HIGH);
-      unsigned long blinkStart = millis();
-      while (millis() - blinkStart < 80) { /* spin-wait for 80 ms */ }
-      digitalWrite(ledPin, LOW);
+      // 5. LED blink when emissions exceed the 100 ppm threshold
+      if (emissionsData > 100) {
+        digitalWrite(ledPin, HIGH);
+        unsigned long blinkStart = millis();
+        while (millis() - blinkStart < 200) { /* spin-wait for 200 ms */ }
+        digitalWrite(ledPin, LOW);
+      } else {
+        digitalWrite(ledPin, LOW);  // Ensure LED is off when below threshold
+      }
 
     } else {
       // HTTP error — log the negative error code for debugging
